@@ -1,4 +1,4 @@
-import { Component } from 'react';
+import { useState, useEffect } from 'react';
 import { Section } from './Section/Section';
 import { PhonebookForm } from './PhonebookForm/PhonebookForm';
 import { Contacts } from './Contacts/Contacts';
@@ -6,93 +6,63 @@ import { Filter } from './Filter/Filter';
 
 const MY_CONTACTS = 'myContacts';
 
-export class App extends Component {
-  state = {
-    contacts: [
-      { id: 'id-5', name: 'Kira Ferato', number: '222-10-20' },
-      { id: 'id-1', name: 'Rosie Simpson', number: '459-12-56' },
-      { id: 'id-2', name: 'Hermione Kline', number: '443-89-12' },
-      { id: 'id-3', name: 'Eden Clements', number: '645-17-79' },
-      { id: 'id-4', name: 'Annie Copeland', number: '227-91-26' },
-    ],
-    name: '',
+export const App = () => {
+  const [contacts, setContacts] = useState(() => {
+    return JSON.parse(localStorage.getItem(MY_CONTACTS)) ?? [];
+  });
+  const [name, setName] = useState('');
+
+  useEffect(() => {
+    localStorage.setItem(MY_CONTACTS, JSON.stringify(contacts));
+  }, [contacts]);
+
+  const reviewNameInContacts = name => {
+    return contacts.find(contact => contact.name === name);
   };
 
-  componentDidMount() {
-    if (!localStorage.getItem(MY_CONTACTS)) {
-      return;
-    }
-    try {
-      this.setState({
-        contacts: JSON.parse(localStorage.getItem(MY_CONTACTS)),
-      });
-    } catch (error) {
-      console.error(error.message);
-    }
-  }
-
-  componentDidUpdate(prevProps, prevState) {
-    if (prevState.contacts !== this.state.contacts) {
-      localStorage.setItem(MY_CONTACTS, JSON.stringify(this.state.contacts));
-    }
-  }
-
-  reviewNameInContacts = name => {
-    return this.state.contacts.find(contact => contact.name === name);
+  const addContact = contact => {
+    setContacts(state => [contact, ...state]);
   };
 
-  addContact = contact => {
-    this.setState(prevState => ({
-      contacts: [contact, ...prevState.contacts],
-    }));
+  const removeContact = removeContactId => {
+    setContacts(state =>
+      state.filter(contact => contact.id !== removeContactId)
+    );
   };
 
-  removeContact = removeContactId => {
-    this.setState(prevState => ({
-      contacts: prevState.contacts.filter(
-        contact => contact.id !== removeContactId
-      ),
-    }));
+  const changeFilter = e => {
+    setName(e.currentTarget.value.trimStart());
   };
 
-  changeFilter = e => {
-    this.setState({ name: e.currentTarget.value.trimStart() });
-  };
-
-  getVisibleContacts = () => {
-    const { contacts, name } = this.state;
+  const getVisibleContacts = () => {
     const nameNormalized = name.toLowerCase();
-
     return contacts.filter(contact =>
       contact.name.toLowerCase().includes(nameNormalized)
     );
   };
 
-  render() {
-    const { name } = this.state;
-
-    const visibleContacts = this.getVisibleContacts();
-
-    return (
-      <>
-        <Section title="Phonebook">
-          <PhonebookForm
-            onAddContact={this.addContact}
-            onReviewName={this.reviewNameInContacts}
-          />
-        </Section>
-        <Section title="Contacts">
-          <Filter
-            filterHeader="Find contacts by name"
-            value={name}
-            onChange={this.changeFilter}
-          />
+  const visibleContacts = getVisibleContacts();
+  return (
+    <>
+      <Section title="Phonebook">
+        <PhonebookForm
+          onAddContact={addContact}
+          onReviewName={reviewNameInContacts}
+        />
+      </Section>
+      <Section title="Contacts">
+        <Filter
+          filterHeader="Find contacts by name"
+          value={name}
+          onChange={changeFilter}
+        />
+        {visibleContacts.length > 0 && (
           <Contacts
             contacts={visibleContacts}
-            onRemoveContact={this.removeContact}
+            onRemoveContact={removeContact}
           />
-        </Section>
-      </>
-    );
-  }
-}
+        )}
+      </Section>
+    </>
+  );
+};
